@@ -23,9 +23,9 @@ class network():
         self.layer_0 = [[0, 0], [0, 1], [1, 0], [1, 1]]
         ## Output vector
         self.expected_out = [0, 1, 1, 0]
-        ## Synapse
-        self.syn0 = [[random() for i in range(hidden_size)] for j in range(len(self.layer_0))]
-        self.syn1 = [[random() for i in range(output_size)] for j in range(hidden_size)]
+        ## Weights
+        self.w0 = [[random() for i in range(hidden_size)] for j in range(len(self.layer_0))]
+        self.w_1 = [[random() for i in range(output_size)] for j in range(hidden_size)]
         ## Predictions on test set
         self.predictions = [0 for i in range(len(self.layer_0))]
 
@@ -36,31 +36,22 @@ class network():
                 y                  = self.expected_out[example]
                 ## Retrieve layers and their sigmoid values
                 l0                 = self.layer_0[example]
-                l1                 = sigmoid(v_dot(l0, self.syn0[example]))
-                l2                 = sigmoid(v_dot(l1, self.syn1[example]))
+                l1                 = sigmoid(v_dot(l0, self.w0[example]))
+                l2                 = sigmoid(v_dot(l1, self.w_1[example]))
                 ## Calculate error and delta in the result layer
                 l2_error           = elementwise(sub, ([y for i in range(len(l2))], l2))
                 l2_delta           = elementwise(mul, (l2_error, sigmoid(l2, True))) 
                 ## Calculate error and delta in the hiddin layer
-                l1_error           = v_dot(l2_delta, self.syn1[example])
+                l1_error           = v_dot(l2_delta, self.w_1[example])
                 l1_delta           = elementwise(mul, (sigmoid(l1, True), l1_error))
-                ## Update each synapse
-                self.syn1[example] = elementwise(add, (self.syn1[example], v_dot(l1, l2_delta)))
-                self.syn0[example] = elementwise(add, (self.syn0[example], v_dot(l0, l1_delta)))
+                ## Update each weights
+                self.w_1[example] = elementwise(add, (self.w_1[example], v_dot(l1, l2_delta)))
+                self.w0[example] = elementwise(add, (self.w0[example], v_dot(l0, l1_delta)))
                 ## Update the predictions table for the test set
                 self.predictions[example] = l2
 
         ## Print the learned model's predictions for the test set.
         print self.predictions    
-
-def m_dot(A, x):
-    """
-    Dot product of Matrix and vector
-    """
-    ret = []
-    for row in A:
-        ret.append(sum([i*j for i, j in zip(row, x)]))
-    return ret
 
 def v_dot(x, y):
     """
