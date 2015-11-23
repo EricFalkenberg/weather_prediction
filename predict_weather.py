@@ -1,22 +1,26 @@
 from random import seed, random
 from operator import add, sub, mul, pow, neg
 import math
+import csv
 
 class network():
     
-    def __init__(self, f_name, hidden_size):
+    def get_data(f_name):
+        ret = []
+        with open(f_name) as csvfile:
+            f_read = csv.reader(csvfile, delimiter=' ', quotechar='|')
+            for row in f_read:
+                ret.append(row)
+        ret.pop(0)
+        return ret
+
+    def __init__(self, test_in, test_out, hidden_size):
         seed(10000)
-        ## TEST NEURAL NET
-        ## XOR
-        ## 0 && 0 = 0
-        ## 0 && 1 = 1
-        ## 1 && 0 = 1
-        ## 1 && 1 = 0
         output_size = 1 
         ## Input vector
-        self.layer_0 = [[0, 0], [0, 1], [1, 0], [1, 1]]
+        self.layer_0 = get_data(test_in)
         ## Output vector
-        self.expected_out = [0, 1, 1, 0]
+        self.expected_out = get_data(test_out)
         ## Weights
         self.w0 = [[random() for i in range(hidden_size)] for j in range(len(self.layer_0))]
         self.w_1 = [[random() for i in range(output_size)] for j in range(hidden_size)]
