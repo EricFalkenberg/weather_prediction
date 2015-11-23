@@ -13,33 +13,44 @@ class network():
     def __init__(self, f_name, hidden_size):
         seed(10000)
         ## TEST NEURAL NET
-        ## AND
+        ## XOR
         ## 0 && 0 = 0
-        ## 0 && 1 = 0
-        ## 1 && 0 = 0
-        ## 0 && 0 = 0
+        ## 0 && 1 = 1
+        ## 1 && 0 = 1
+        ## 1 && 1 = 0
         output_size = 1 
         ## Input vector
         self.layer_0 = [[0, 0], [0, 1], [1, 0], [1, 1]]
         ## Output vector
-        self.expected_out = [0, 0, 0, 1]
+        self.expected_out = [0, 1, 1, 0]
         ## Synapse
-        self.syn0 = [[random() for i in range(output_size)] for j in range(len(self.layer_0))]
+        self.syn0 = [[random() for i in range(hidden_size)] for j in range(len(self.layer_0))]
+        self.syn1 = [[random() for i in range(output_size)] for j in range(hidden_size)]
         ## Predictions on test set
         self.predictions = [0 for i in range(len(self.layer_0))]
 
-        ## Learn the model
+        ## Learn the model via backpropagation
         for i in range(100000):
             for example in range(len(self.layer_0)):
+                ## Get the current examples expected output
                 y                  = self.expected_out[example]
+                ## Retrieve layers and their sigmoid values
                 l0                 = self.layer_0[example]
                 l1                 = sigmoid(v_dot(l0, self.syn0[example]))
-                l1_error           = elementwise(sub, ([y for i in range(len(l1))], l1))
-                l1_delta           = elementwise(mul, (l1_error, sigmoid(l1, True)))
+                l2                 = sigmoid(v_dot(l1, self.syn1[example]))
+                ## Calculate error and delta in the result layer
+                l2_error           = elementwise(sub, ([y for i in range(len(l2))], l2))
+                l2_delta           = elementwise(mul, (l2_error, sigmoid(l2, True))) 
+                ## Calculate error and delta in the hiddin layer
+                l1_error           = v_dot(l2_delta, self.syn1[example])
+                l1_delta           = elementwise(mul, (sigmoid(l1, True), l1_error))
+                ## Update each synapse
+                self.syn1[example] = elementwise(add, (self.syn1[example], v_dot(l1, l2_delta)))
                 self.syn0[example] = elementwise(add, (self.syn0[example], v_dot(l0, l1_delta)))
-                self.predictions[example] = l1
+                ## Update the predictions table for the test set
+                self.predictions[example] = l2
 
-        ## Print the learned models predictions for the test set.
+        ## Print the learned model's predictions for the test set.
         print self.predictions    
 
 def m_dot(A, x):
@@ -92,6 +103,6 @@ def sigmoid(x, deriv=False):
     return elementwise(pow, (elementwise(add, (arr, elementwise(math.exp, elementwise(neg, x)))), -1))
 
 def main():
-    network('mock', 2) 
+    network('mock', 4) 
 
 main()
