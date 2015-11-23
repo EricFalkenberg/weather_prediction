@@ -2,12 +2,6 @@ from random import seed, random
 from operator import add, sub, mul, pow, neg
 import math
 
-## TEST
-## 0  0 = 0
-## 0  1 = 1
-## 1  0 = 1
-## 1  1 = 1
-
 class network():
     
     def __init__(self, f_name, hidden_size):
@@ -53,11 +47,21 @@ class network():
         ## Print the learned model's predictions for the test set.
         print self.predictions    
 
-def v_dot(x, y):
+def sigmoid(x, deriv=False):
     """
-    Dot product of vector and vector
+    The sigmoid function our layers use for gradient descent.
+    Uses elementwise operations such that it can operate on lists without
+    the aid of the numpy library.
     """
-    return sum([i*j for i, j in zip(x, y)])
+    ones = lambda x: [1 for i in range(x)]
+    if deriv:
+        return elementwise(mul, (x, (elementwise(sub, (ones(len(x)), x)))))
+    if not isinstance(x, list):
+        arr = [1]
+    else:
+        arr = ones(len(x))
+    return elementwise(pow, (elementwise(add, (arr, elementwise(math.exp, elementwise(neg, x)))), -1))
+
 
 def elementwise(op, args):
     """
@@ -73,25 +77,12 @@ def elementwise(op, args):
 
     return op(args)
 
-def ones(length):
+def v_dot(x, y):
     """
-    Return a list of 1's
+    Dot product of vector and vector
     """
-    return [1 for i in range(length)]
+    return sum([i*j for i, j in zip(x, y)])
 
-def sigmoid(x, deriv=False):
-    """
-    The sigmoid function our layers use for gradient descent.
-    Uses elementwise operations such that it can operate on lists without
-    the aid of the numpy library.
-    """
-    if deriv:
-        return elementwise(mul, (x, (elementwise(sub, (ones(len(x)), x)))))
-    if not isinstance(x, list):
-        arr = [1]
-    else:
-        arr = ones(len(x))
-    return elementwise(pow, (elementwise(add, (arr, elementwise(math.exp, elementwise(neg, x)))), -1))
 
 def main():
     network('mock', 4) 
