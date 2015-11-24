@@ -10,20 +10,23 @@ with open('roc2014.csv', 'rb') as csvfile:
             header = row
             skip = False
             continue
-        for i in range(len(row)):
-            if float(row[i]) != 0.0:
-                row[i] = 1
+        new = []
+        if float(row[0]) != 0:
+            if float(row[1]) != 0:
+                new = [1.0]
             else:
-                row[i] = 0
-        data.append(row)
-
-for i in data:
-    print i
+                new = [0.666]
+        else:
+            if float(row[1]) != 0:
+                new = [0.333]
+            else:
+                new = [0.00]
+        data.append(new)
 
 with open('test_out.csv', 'wb') as csvfile:
     spamwriter = csv.writer(csvfile, delimiter=',', quotechar='|',
                                      quoting=csv.QUOTE_MINIMAL)
-    spamwriter.writerow(header)
+    spamwriter.writerow(['rain/snow'])
     for entry in data:
         spamwriter.writerow(entry)
 

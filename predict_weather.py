@@ -1,55 +1,207 @@
+import sys
+import pickle
 from random import seed, random
 from operator import add, sub, mul, pow, neg
 import math
 import csv
+import time
 
 class network():
     
-    def get_data(f_name):
+    def get_data(self, f_name):
         ret = []
+        skip = True
         with open(f_name) as csvfile:
-            f_read = csv.reader(csvfile, delimiter=' ', quotechar='|')
+            f_read = csv.reader(csvfile, delimiter=',', quotechar='|')
             for row in f_read:
-                ret.append(row)
+                if skip:
+                    skip = False
+                    continue
+                ret.append([float(i) for i in row])
         ret.pop(0)
         return ret
 
     def __init__(self, test_in, test_out, hidden_size):
         seed(10000)
-        output_size = 1 
+        output_size = 1
+        learning_rate = 0.20
         ## Input vector
-        self.layer_0 = get_data(test_in)
+        data = self.get_data(test_in) 
+        training_set = data[:2*len(data)//3]
+        test_set     = data[2*len(data)//3:]
         ## Output vector
-        self.expected_out = get_data(test_out)
+        data = self.get_data(test_out)
+        training_out = data[:2*len(data)//3]
+        test_out     = data[2*len(data)//3:]
         ## Weights
-        self.w0 = [[random() for i in range(hidden_size)] for j in range(len(self.layer_0))]
-        self.w_1 = [[random() for i in range(output_size)] for j in range(hidden_size)]
-        ## Predictions on test set
-        self.predictions = [0 for i in range(len(self.layer_0))]
-
+        w_0 = [[random() for i in range(hidden_size)] for j in range(len(training_set[0]))]
+        w_1 = [[random() for i in range(output_size)] for j in range(hidden_size)]
         ## Learn the model via backpropagation
-        for i in range(100000):
-            for example in range(len(self.layer_0)):
-                ## Get the current examples expected output
-                y                  = self.expected_out[example]
-                ## Retrieve layers and their sigmoid values
-                l0                 = self.layer_0[example]
-                l1                 = sigmoid(v_dot(l0, self.w0[example]))
-                l2                 = sigmoid(v_dot(l1, self.w_1[example]))
-                ## Calculate error and delta in the result layer
-                l2_error           = elementwise(sub, ([y for i in range(len(l2))], l2))
-                l2_delta           = elementwise(mul, (l2_error, sigmoid(l2, True))) 
-                ## Calculate error and delta in the hiddin layer
-                l1_error           = v_dot(l2_delta, self.w_1[example])
-                l1_delta           = elementwise(mul, (sigmoid(l1, True), l1_error))
-                ## Update each weights
-                self.w_1[example] = elementwise(add, (self.w_1[example], v_dot(l1, l2_delta)))
-                self.w0[example] = elementwise(add, (self.w0[example], v_dot(l0, l1_delta)))
-                ## Update the predictions table for the test set
-                self.predictions[example] = l2
+        
+        IN   = 0
+        HIDE = 1
+        OUT  = 2       
+        err = [1000 for i in range(len(training_set))]
+        print "Training network..."
+        while sum(err)/len(err) > 0.11:
+            err = []
+            res = []
+            for example in range(len(training_set)):
+                x = training_set[example]
+                y = training_out[example]
+                in_arr   = [[], [], []]
+                a_arr    = [[], [], []]
+                delt_arr = [[], [], []] 
 
-        ## Print the learned model's predictions for the test set.
-        print self.predictions    
+                ## Propagate the inputs forward
+                for i in training_set[example]:
+                    a_arr[IN].append(i)
+                    in_arr[IN].append(i)
+                
+                for j in range(hidden_size):
+                    in_arr[HIDE].append(sum([w_0[i][j]*a_arr[IN][i] for i in range(len(w_0))]))
+                    a_arr[HIDE].append(sigmoid(in_arr[HIDE][j]))
+                
+                for j in range(output_size):
+                    in_arr[OUT].append(sum([w_1[i][j]*a_arr[HIDE][i] for i in range(len(w_1))]))
+                    a_arr[OUT].append(sigmoid(in_arr[OUT][j]))
+            
+                for j in range(output_size):
+                    delt_arr[OUT].append(sigmoid(in_arr[OUT][j], deriv=True) * (y[j] - a_arr[OUT][j]))
+
+                err.append( abs( y[0] - a_arr[OUT][0] ) )
+                res.append(a_arr[OUT][0])
+
+                for i in range(hidden_size):
+                    delt_arr[HIDE].append(sigmoid(in_arr[HIDE][i], deriv=True)*(sum([w_1[i][j]*delt_arr[OUT][j] for j in range(len(delt_arr[OUT]))])))
+                
+                for i in range(len(x)):
+                    delt_arr[IN].append(sigmoid(in_arr[IN][i], deriv=True)*(sum([w_0[i][j]*delt_arr[HIDE][j] for j in range(len(delt_arr[HIDE]))]))) 
+
+                for i in range(len(w_0)):
+                    for j in range(len(w_0[i])):
+                        w_0[i][j] = w_0[i][j] + learning_rate * a_arr[IN][i] * delt_arr[HIDE][j]
+                for i in range(len(w_1)):
+                    for j in range(len(w_1[i])):
+                        w_1[i][j] = w_1[i][j] + learning_rate * a_arr[HIDE][i] * delt_arr[OUT][j]
+
+                self.w_0 = w_0
+                self.w_1 = w_1
+                self.hidden_size = hidden_size
+                self.output_size = output_size
+                self.training_set = training_set
+                self.test_set = test_set
+                self.training_out = training_out
+                self.test_out = test_out
+
+    
+    def predict(self, x):
+        IN   = 0
+        HIDE = 1
+        OUT  = 2       
+        in_arr   = [[], [], []]
+        a_arr    = [[], [], []]
+        delt_arr = [[], [], []] 
+
+        for i in x: 
+            a_arr[IN].append(i)
+            in_arr[IN].append(i)
+        
+        for j in range(self.hidden_size):
+            in_arr[HIDE].append(sum([self.w_0[i][j]*a_arr[IN][i] for i in range(len(self.w_0))]))
+            a_arr[HIDE].append(sigmoid(in_arr[HIDE][j]))
+        for j in range(self.output_size):
+            in_arr[OUT].append(sum([self.w_1[i][j]*a_arr[HIDE][i] for i in range(len(self.w_1))]))
+            a_arr[OUT].append(sigmoid(in_arr[OUT][j]))
+
+        classification = -1            
+        dist = 999
+        for i in [0.0, 0.333, 0.666, 1.0]:
+            if abs(i - a_arr[OUT][0]) < dist:
+                dist = a_arr[OUT][0]
+                classification = i
+        if classification == 0.0:
+            print "It will neither rain nor snow"
+        if classification == 0.333:
+            print "It will rain"
+        if classification == 0.666:
+            print "It will snow"
+        if classification == 1.0:
+            print "It will both rain and snow"
+
+    def testtraining(self):
+        IN   = 0
+        HIDE = 1
+        OUT  = 2       
+        correct = 0
+        incorrect = 0
+        for example in range(len(self.training_set)):
+            x = self.training_set[example]
+            y = self.training_out[example]
+
+            in_arr   = [[], [], []]
+            a_arr    = [[], [], []]
+            delt_arr = [[], [], []] 
+
+            for i in x: 
+                a_arr[IN].append(i)
+                in_arr[IN].append(i)
+            
+            for j in range(self.hidden_size):
+                in_arr[HIDE].append(sum([self.w_0[i][j]*a_arr[IN][i] for i in range(len(self.w_0))]))
+                a_arr[HIDE].append(sigmoid(in_arr[HIDE][j]))
+            for j in range(self.output_size):
+                in_arr[OUT].append(sum([self.w_1[i][j]*a_arr[HIDE][i] for i in range(len(self.w_1))]))
+                a_arr[OUT].append(sigmoid(in_arr[OUT][j]))
+
+            classification = -1            
+            dist = 999
+            for i in [0.0, 0.333, 0.666, 1.0]:
+                if abs(i - a_arr[OUT][0]) < dist:
+                    dist = a_arr[OUT][0]
+                    classification = i
+            if classification == y[0]:
+                correct += 1
+            else:
+                incorrect += 1
+        print "%.2f percent of training tests are passing." % (100.0*float(correct)/float(correct+incorrect))
+
+    def testset(self):
+        IN   = 0
+        HIDE = 1
+        OUT  = 2       
+        correct = 0
+        incorrect = 0
+        for example in range(len(self.test_set)):
+            x = self.test_set[example]
+            y = self.test_out[example]
+
+            in_arr   = [[], [], []]
+            a_arr    = [[], [], []]
+            delt_arr = [[], [], []] 
+
+            for i in x: 
+                a_arr[IN].append(i)
+                in_arr[IN].append(i)
+            
+            for j in range(self.hidden_size):
+                in_arr[HIDE].append(sum([self.w_0[i][j]*a_arr[IN][i] for i in range(len(self.w_0))]))
+                a_arr[HIDE].append(sigmoid(in_arr[HIDE][j]))
+            for j in range(self.output_size):
+                in_arr[OUT].append(sum([self.w_1[i][j]*a_arr[HIDE][i] for i in range(len(self.w_1))]))
+                a_arr[OUT].append(sigmoid(in_arr[OUT][j]))
+
+            classification = -1            
+            dist = 999
+            for i in [0.0, 0.333, 0.666, 1.0]:
+                if abs(i - a_arr[OUT][0]) < dist:
+                    dist = a_arr[OUT][0]
+                    classification = i
+            if classification == y[0]:
+                correct += 1
+            else:
+                incorrect += 1
+        print "%.2f percent of test set tests are passing." % (100.0*float(correct)/float(correct+incorrect))
 
 def sigmoid(x, deriv=False):
     """
@@ -57,15 +209,10 @@ def sigmoid(x, deriv=False):
     Uses elementwise operations such that it can operate on lists without
     the aid of the numpy library.
     """
-    ones = lambda x: [1 for i in range(x)]
     if deriv:
-        return elementwise(mul, (x, (elementwise(sub, (ones(len(x)), x)))))
-    if not isinstance(x, list):
-        arr = [1]
+        return math.e**x/(((math.e**x) + 1)**2)
     else:
-        arr = ones(len(x))
-    return elementwise(pow, (elementwise(add, (arr, elementwise(math.exp, elementwise(neg, x)))), -1))
-
+        return 1/(1+math.e**(-1*x))
 
 def elementwise(op, args):
     """
@@ -89,6 +236,32 @@ def v_dot(x, y):
 
 
 def main():
-    network('mock', 4) 
-
+    args = sys.argv
+    if len(args) != 2:
+        print "usage: python predict_weather.py [train] [testtraining] [predict]"
+        return    
+    if args[1] == 'train':
+        nn = network('test_in.csv', 'test_out.csv', 6) 
+        print "Network has been trained: "
+        nn.testtraining()
+        nn.testset()
+    else:
+        with open('learned_model', 'rb') as f:
+            nn = pickle.load(f)
+    if args[1] == 'testtraining':
+        nn.testtraining()
+    if args[1] == "predict":
+        print "Please input the following information. Make sure to standardize inputs before attempting prediction"
+        prcp = float(raw_input("PRCP: "))
+        snwd = float(raw_input("SNWD: "))
+        snow = float(raw_input("SNOW: ")) 
+        tmax = float(raw_input("TMAX: "))
+        tmin = float(raw_input("TMIN: "))
+        awnd = float(raw_input("AWND: "))
+        wdf2 = float(raw_input("WDF2: "))
+        wdf5 = float(raw_input("WDF5: "))
+        wsf2 = float(raw_input("WSF2: "))
+        wsf5 = float(raw_input("WSF5: "))
+        nn.predict([prcp, snwd, snow, tmax, tmin, awnd, wdf2, wdf5, wsf2, wsf5])
+    
 main()
