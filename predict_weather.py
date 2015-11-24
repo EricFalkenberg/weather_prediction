@@ -65,7 +65,8 @@ class network():
                 for j in range(output_size):
                     in_arr[OUT].append(sum([w_1[i][j]*a_arr[HIDE][i] for i in range(len(w_1))]))
                     a_arr[OUT].append(sigmoid(in_arr[OUT][j]))
-            
+
+                ## Back propagation            
                 for j in range(output_size):
                     delt_arr[OUT].append(sigmoid(in_arr[OUT][j], deriv=True) * (y[j] - a_arr[OUT][j]))
 
@@ -78,6 +79,7 @@ class network():
                 for i in range(len(x)):
                     delt_arr[IN].append(sigmoid(in_arr[IN][i], deriv=True)*(sum([w_0[i][j]*delt_arr[HIDE][j] for j in range(len(delt_arr[HIDE]))]))) 
 
+                ## Update weights
                 for i in range(len(w_0)):
                     for j in range(len(w_0[i])):
                         w_0[i][j] = w_0[i][j] + learning_rate * a_arr[IN][i] * delt_arr[HIDE][j]
@@ -85,6 +87,7 @@ class network():
                     for j in range(len(w_1[i])):
                         w_1[i][j] = w_1[i][j] + learning_rate * a_arr[HIDE][i] * delt_arr[OUT][j]
 
+                ## Save values
                 self.w_0 = w_0
                 self.w_1 = w_1
                 self.hidden_size = hidden_size
@@ -96,6 +99,8 @@ class network():
 
     
     def predict(self, x):
+        ## Using data about a certain day in vector x, predict the weather for
+        ## the day after x
         IN   = 0
         HIDE = 1
         OUT  = 2       
@@ -130,6 +135,7 @@ class network():
             print "It will both rain and snow"
 
     def testtraining(self):
+        ## Test the neural network against the training set
         IN   = 0
         HIDE = 1
         OUT  = 2       
@@ -167,6 +173,7 @@ class network():
         print "%.2f percent of training tests are passing." % (100.0*float(correct)/float(correct+incorrect))
 
     def testset(self):
+        ## Test the neural network against the test set
         IN   = 0
         HIDE = 1
         OUT  = 2       
