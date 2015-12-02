@@ -9,6 +9,9 @@ import time
 class network():
     
     def get_data(self, f_name):
+        """
+        Read a given dataset from the file name specified.
+        """
         ret = []
         skip = True
         with open(f_name) as csvfile:
@@ -22,9 +25,18 @@ class network():
         return ret
 
     def __init__(self, test_in, test_out, hidden_size):
+        """
+        Initialize the neural network.
+        """
+        ## Initialize constants and random seed.
         seed(10000)
         output_size = 1
-        learning_rate = 0.20
+        learning_rate = 0.2
+        error_threshold = 0.11
+        IN   = 0
+        HIDE = 1
+        OUT  = 2       
+        err = [1000 for i in range(len(training_set))]
         ## Input vector
         data = self.get_data(test_in) 
         training_set = data[:2*len(data)//3]
@@ -36,21 +48,22 @@ class network():
         ## Weights
         w_0 = [[random() for i in range(hidden_size)] for j in range(len(training_set[0]))]
         w_1 = [[random() for i in range(output_size)] for j in range(hidden_size)]
+
         ## Learn the model via backpropagation
-        
-        IN   = 0
-        HIDE = 1
-        OUT  = 2       
-        err = [1000 for i in range(len(training_set))]
         print "Training network..."
-        while sum(err)/len(err) > 0.11:
+        while sum(err)/len(err) > error_threshold:
             err = []
-            res = []
+            ## For every example in the training set
             for example in range(len(training_set)):
+                ## Example input
                 x = training_set[example]
+                ## Example output
                 y = training_out[example]
+                ## Layer inputs
                 in_arr   = [[], [], []]
+                ## Layer actuators
                 a_arr    = [[], [], []]
+                ## Layer deltas
                 delt_arr = [[], [], []] 
 
                 ## Propagate the inputs forward
@@ -66,12 +79,12 @@ class network():
                     in_arr[OUT].append(sum([w_1[i][j]*a_arr[HIDE][i] for i in range(len(w_1))]))
                     a_arr[OUT].append(sigmoid(in_arr[OUT][j]))
 
-                ## Back propagation            
+                ## Back propagation of deltas        
                 for j in range(output_size):
                     delt_arr[OUT].append(sigmoid(in_arr[OUT][j], deriv=True) * (y[j] - a_arr[OUT][j]))
 
+                ## Record the example error
                 err.append( abs( y[0] - a_arr[OUT][0] ) )
-                res.append(a_arr[OUT][0])
 
                 for i in range(hidden_size):
                     delt_arr[HIDE].append(sigmoid(in_arr[HIDE][i], deriv=True)*(sum([w_1[i][j]*delt_arr[OUT][j] for j in range(len(delt_arr[OUT]))])))
@@ -210,6 +223,7 @@ class network():
                 incorrect += 1
         print "%.2f percent of test set tests are passing." % (100.0*float(correct)/float(correct+incorrect))
 
+
 def sigmoid(x, deriv=False):
     """
     The sigmoid function our layers use for gradient descent.
@@ -220,26 +234,6 @@ def sigmoid(x, deriv=False):
         return math.e**x/(((math.e**x) + 1)**2)
     else:
         return 1/(1+math.e**(-1*x))
-
-def elementwise(op, args):
-    """
-    Take an operation and apply it to the elements in
-    the arguments tuple.
-    If given lists, apply the operations elementwise.
-    """
-    if isinstance(args, tuple):
-        x, y = args
-        if isinstance(y, int) or isinstance(y, float):
-            return [op(i, y) for i in x]
-        return [op(i, j) for i, j in zip(x, y)]
-
-    return op(args)
-
-def v_dot(x, y):
-    """
-    Dot product of vector and vector
-    """
-    return sum([i*j for i, j in zip(x, y)])
 
 
 def main():
