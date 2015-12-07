@@ -29,6 +29,9 @@ This program will accept the following flags
         0.666:  It is snowing but not raining
         1.0:    It is both raining and snowing
 
+    
+    (NOTE: This would be better suited via a multi-ouput network. A good deal of accuracy is lost when
+           attempting to predict binary output via one continuous output.)
     I calculated this based off of whether or not there were non-zero values in SNWD and PRCP for any 
     given row.
 
