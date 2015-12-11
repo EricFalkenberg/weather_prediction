@@ -36,11 +36,11 @@ class network():
         IN   = 0
         HIDE = 1
         OUT  = 2       
-        err = [1000 for i in range(len(training_set))]
         ## Input vector
         data = self.get_data(test_in) 
         training_set = data[:2*len(data)//3]
         test_set     = data[2*len(data)//3:]
+        err = [1000 for i in range(len(training_set))]
         ## Output vector
         data = self.get_data(test_out)
         training_out = data[:2*len(data)//3]
